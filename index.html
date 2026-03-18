@@ -463,6 +463,119 @@ function pickExcluding(arr, ...excludes) {
 }
 
 // ═══════════════════════════════════════════════════════════
+//  チップ選択 vs 自由入力を判定するユーティリティ
+// ═══════════════════════════════════════════════════════════
+function isChipInput(qId, value) {
+  if (!value) return true; // 空 = チップ扱い
+  const chipTexts = [...document.querySelectorAll(`.chip[data-q="${qId}"]`)]
+    .map(c => c.textContent.trim());
+  const items = value.split('、').map(s => s.trim().replace(/。$/g, '')).filter(Boolean);
+  return items.length > 0 && items.every(item => chipTexts.includes(item));
+}
+
+// 自由入力テキストをクリーンアップ（末尾句読点は付けない→wrapFreeTextで付与）
+function cleanFreeText(text) {
+  if (!text) return null;
+  let cleaned = text.trim();
+  if (!cleaned) return null;
+  // 末尾の句読点を除去
+  cleaned = cleaned.replace(/[。、！？!?\s]+$/g, '');
+  // 文中の。を、に変換（文の途中に。が出ないように）
+  cleaned = cleaned.replace(/。/g, '、');
+  cleaned = cleaned.replace(/、{2,}/g, '、');
+  cleaned = cleaned.replace(/、+$/g, '');
+  if (!cleaned) return null;
+  return cleaned;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  自由入力テキスト用ラッパーテンプレート
+//  短いフレーズに文脈のフレームを追加して自然な文章にする
+// ═══════════════════════════════════════════════════════════
+const FREE_TEXT_TPL = {
+  standard: {
+    q1: [
+      v => `${v}ということに悩んでいて、どうにかしたいと思っていました。`,
+      v => `${v}のがつらくて、改善したいなと思っていました。`,
+      v => `${v}という症状があって、何とかしたいと感じていました。`,
+      v => `前から${v}のが気になっていて、なんとかならないかなと思っていました。`,
+    ],
+    q2: [
+      v => `以前は${v}のですが、思うような改善にはなりませんでした。`,
+      v => `これまで${v}ということもあったのですが、あまり効果がありませんでした。`,
+      v => `${v}こともあったのですが、なかなか変化がなくて。`,
+    ],
+    q3: [
+      v => `施術を受けてみて、${v}と感じています。`,
+      v => `実際に受けてみたところ、${v}というのが素直な感想です。`,
+      v => `通い始めてから、${v}と実感しています。`,
+      v => `${v}のを感じることができて、来てよかったと思いました。`,
+    ],
+    q4: [
+      v => `${v}のも印象的で、居心地よく通えています。`,
+      v => `${v}ので、安心して施術を受けることができました。`,
+      v => `${v}というのもよかったです。`,
+    ],
+    q5: [
+      v => `${v}ので、同じ悩みを持つ方にもおすすめしたいです。`,
+      v => `${v}と感じているので、気になっている方はぜひ一度試してみてほしいです。`,
+      v => `${v}ので、迷っている方には一度行ってみてほしいと思います。`,
+    ],
+  },
+  polite: {
+    q1: [
+      v => `${v}ということに悩んでおり、改善したいと考えておりました。`,
+      v => `${v}のが気になっておりまして、何とかしたいと思っておりました。`,
+      v => `${v}という症状がございまして、対策を考えておりました。`,
+      v => `以前から${v}のが気になっており、改善の方法を探しておりました。`,
+    ],
+    q2: [
+      v => `以前は${v}のですが、思うような改善には至りませんでした。`,
+      v => `これまで${v}ということもございましたが、あまり効果を感じられませんでした。`,
+      v => `${v}こともございましたが、根本的な改善にはなりませんでした。`,
+    ],
+    q3: [
+      v => `施術を受けてみたところ、${v}と感じております。`,
+      v => `実際に受けてみて、${v}というのが率直な感想でございます。`,
+      v => `通わせていただいて、${v}と実感しております。`,
+      v => `${v}のを感じることができまして、来院してよかったと思いました。`,
+    ],
+    q4: [
+      v => `${v}のも印象的で、大変居心地よく通えております。`,
+      v => `${v}のが印象的で、安心して施術を受けることができました。`,
+      v => `${v}という点も大変よかったと感じております。`,
+    ],
+    q5: [
+      v => `${v}と感じておりますので、同じお悩みをお持ちの方にもお勧めしたいです。`,
+      v => `${v}ことから、気になっていらっしゃる方にはぜひ一度足を運んでいただきたいです。`,
+      v => `${v}と思っておりますので、迷われている方にはぜひお勧めしたいです。`,
+    ],
+  },
+};
+
+// 自由入力テキストをQ固有のフレームでラップする
+function wrapFreeText(qId, formality, rawText) {
+  const v = cleanFreeText(rawText);
+  if (!v) return null;
+
+  // 既に丁寧な文末（ました、です等）で終わる場合 → 完成された文と見なしそのまま使う
+  const politeEndings = ['ました', 'でした', 'です', 'ています', 'ております', 'ませんでした', 'ございます', 'おります', 'いたします'];
+  const isComplete = politeEndings.some(e => v.endsWith(e));
+
+  if (isComplete) {
+    return v + '。';
+  }
+
+  // 短い / カジュアルな文 → Q固有のテンプレートでフレームを追加
+  const tpls = FREE_TEXT_TPL[formality] && FREE_TEXT_TPL[formality][qId];
+  if (tpls && tpls.length > 0) {
+    return pick(tpls)(v);
+  }
+
+  return v + '。';
+}
+
+// ═══════════════════════════════════════════════════════════
 //  選択項目の自然な言い換えマップ
 //  チップの表示テキスト → 文中で自然に使える表現に変換
 // ═══════════════════════════════════════════════════════════
@@ -583,14 +696,14 @@ const STD_TPL = {
   // ━━━━ friendly（フレンドリー・親しみやすい） ━━━━
   friendly: {
     openers: [
-      '友達の紹介で行ってみました。',
       'ネットで見つけて、気になって行ってみたんです。',
       '前から気になってて、やっと予約できました。',
       'たまたまSNSで見かけて、試しに行ってみました。',
-      '家族にすすめられて行ってきました。',
-      '知り合いに紹介してもらって行ってみました。',
+      '口コミを見て気になったので、行ってみました。',
       '評判がよさそうだったので、思い切って予約してみました。',
       '何とかしたくて色々調べた結果、こちらに行ってみました。',
+      '近所で評判がよさそうだったので、行ってきました。',
+      'ずっと気になっていて、やっと行けました。',
     ],
     q1: [
       v => `ずっと${v}で困ってて、どうにかしたいなと思ってました。`,
@@ -613,18 +726,21 @@ const STD_TPL = {
       '何をしたらいいか分からず、そのまま放置してしまっていました。',
     ],
     q3: [
-      v => `実際に受けてみたら、${v}のがうれしかったです。`,
+      v => `実際に受けてみたら、${v}のがうれしかったです！`,
       v => `施術を受けてみると、${v}と感じています。`,
-      v => `何回か通ってみて、${v}のを実感できるようになりました。`,
+      v => `何回か通ってみて、${v}のを実感できるようになりました！`,
       v => `通い始めてから${v}ので、来てよかったなと思っています。`,
       v => `受けた後は${v}感じがして、素直にありがたいなと思いました。`,
+      v => `正直ここまで${v}とは思ってなくて、びっくりしました！`,
+      v => `${v}のが自分でもわかって、すごくうれしかったです！`,
     ],
     q4: [
       v => `${v}、居心地よく通えています。`,
-      v => `${v}、安心してお任せできる雰囲気でした。`,
+      v => `${v}、安心してお任せできる雰囲気でした！`,
       v => `${v}、気持ちよく施術を受けることができました。`,
-      v => `${v}、初めてでも緊張せずに過ごせたのがよかったです。`,
+      v => `${v}、初めてでも緊張せずに過ごせたのがよかったです！`,
       v => `${v}、無理なく通い続けられそうだなと感じています。`,
+      v => `${v}、すごく居心地がよかったです！`,
     ],
     q5: [
       v => `${v}には一度行ってみてほしいなと思います。`,
@@ -645,14 +761,14 @@ const STD_TPL = {
   // ━━━━ cheerful（明るい・元気いっぱい） ━━━━
   cheerful: {
     openers: [
-      '友達からの紹介で行ってみました！',
       'ネットで見つけて、これだ！と思って予約しました。',
       '気になってて、思い切って行ってきました！',
       'SNSで見かけて、さっそく試してみたんです。',
-      '家族にすすめられて、行ってみることにしました。',
-      '知人の紹介で行ってみたら大当たり！',
+      '口コミで見つけて、すぐに予約しちゃいました！',
       'とにかく何とかしたくて、予約しちゃいました。',
       '評判がよかったので、期待を持って来院しました。',
+      '前から気になってて、やっと行けました！',
+      'ずっと気になってたので、思い切って予約しました！',
     ],
     q1: [
       v => `ずっと${v}が悩みで、本当に何とかしたかったんです。`,
@@ -676,17 +792,20 @@ const STD_TPL = {
     ],
     q3: [
       v => `実際に受けてみたら${v}のでビックリしました！`,
-      v => `施術を受けてみて、${v}のが嬉しかったです。`,
-      v => `通ってみて、${v}のを実感できるようになって来ました。`,
-      v => `受けた後、${v}のが本当に嬉しくて、来てよかったなって思いました。`,
+      v => `施術を受けてみて、${v}のが嬉しかったです！`,
+      v => `通ってみて、${v}のを実感できるようになって来ました！`,
+      v => `受けた後、${v}のが本当に嬉しくて、来てよかったなって思いました！`,
       v => `こんなに${v}とは思いませんでした！`,
+      v => `${v}のが自分でもわかって、めちゃくちゃ嬉しかったです！`,
+      v => `まさか${v}とは思ってなかったので、感動しました！`,
     ],
     q4: [
-      v => `${v}、本当に快適に通えます。`,
-      v => `${v}、もう気持ちよく施術を受けることができました。`,
+      v => `${v}、本当に快適に通えます！`,
+      v => `${v}、もう気持ちよく施術を受けることができました！`,
       v => `${v}、初めてでも全然不安なく過ごせたのが良かった！`,
-      v => `${v}、また来たいって思えるくらい素敵な環境です。`,
-      v => `${v}、ずっと通い続けたいなって感じています。`,
+      v => `${v}、また来たいって思えるくらい素敵な環境です！`,
+      v => `${v}、ずっと通い続けたいなって感じています！`,
+      v => `${v}、居心地がよすぎてびっくりしました！`,
     ],
     q5: [
       v => `${v}には本当に行ってみてほしいです！`,
@@ -707,14 +826,14 @@ const STD_TPL = {
   // ━━━━ calm（落ち着いた・控えめ） ━━━━
   calm: {
     openers: [
-      '知人の紹介で伺いました。',
       'ネットで見つけて、予約させていただきました。',
       '以前から気になっていたので、来院しました。',
       'たまたま目に入ったので、試してみることにしました。',
-      '紹介を受けて、お世話になりました。',
+      '口コミを見て気になり、来院しました。',
       'インターネットで評判を見て、予約しました。',
       '色々と検索した中で、こちらを選びました。',
       'ずっと迷っていたのですが、来院することにしました。',
+      'ホームページを見て、予約することにしました。',
     ],
     q1: [
       v => `以前から${v}があり、何とか改善したいと考えていました。`,
@@ -769,14 +888,14 @@ const STD_TPL = {
   // ━━━━ polite_type（丁寧・きちんとした） ━━━━
   polite_type: {
     openers: [
-      '知人の紹介で参りました。',
       'ネットで見つけて、予約いたしました。',
       'かねてから気になっておりましたので、来院いたしました。',
       '口コミで見かけて、予約させていただきました。',
-      'ご紹介いただいて、お世話になりました。',
+      'ホームページを拝見して、お世話になりました。',
       'インターネットで拝見して、予約いたしました。',
       '色々と検討させていただいた上で、こちらにお願いすることにしました。',
       'ずっと迷っておりましたが、思い切ってお伺いしました。',
+      '以前から気になっておりまして、予約いたしました。',
     ],
     q1: [
       v => `かねてから${v}があり、何とか改善したいと考えておりました。`,
@@ -877,7 +996,7 @@ const POL_OPENERS = {
     'この度お伺いさせていただきました。',
     '先日初めてお越しさせていただきました。',
     'お世話になっております。',
-    'ご紹介いただいて、来院いたしました。',
+    '口コミを拝見して、来院いたしました。',
     '評判をお聞きして、予約させていただきました。',
     '思い切ってお伺いしてみました。',
   ],
@@ -887,29 +1006,29 @@ const POL_OPENERS = {
     'この度初めて来院させていただきました。',
     '先日お伺いさせていただきました。',
     'お世話になっております。',
-    'ご紹介いただいて、早速お伺いいたしました。',
+    '口コミを見て、早速お伺いいたしました。',
     '評判がよかったので、来院いたしました。',
     '思い切ってお伺いしてみたところ、素敵でした。',
   ],
   calm: [
     'こちらでお世話になりました。',
     '先日初めてお伺いさせていただきました。',
-    'ご紹介をいただいて、来院いたしました。',
+    '口コミを拝見して、来院いたしました。',
     'この度お越しさせていただきました。',
     'お世話になっております。',
     'インターネットで拝見して、予約させていただきました。',
     '以前から気になっておりましたので、来院いたしました。',
-    'お手数ですが、お伺いさせていただきました。',
+    'ホームページを拝見して、来院いたしました。',
   ],
   polite_type: [
     'こちらでお世話になりました。',
     '先日初めてお伺いさせていただきました。',
-    'ご紹介をいただいて、来院いたしました。',
+    '口コミを拝見いたしまして、来院いたしました。',
     'この度お越しさせていただいた次第です。',
     'お世話になっております。',
     'インターネットで拝見いたしまして、予約させていただきました。',
     'かねてから気になっておりましたので、来院いたしました。',
-    'お忙しいところお世話になりました。',
+    'ホームページを拝見して、来院いたしました。',
   ],
 };
 
@@ -1018,13 +1137,19 @@ function buildReview(personality, formality, inputs) {
     sources = [];
 
     // --- Q1 ---
-    if (inputs.q1) {
+    if (inputs.q1free) {
+      const wrapped = wrapFreeText('q1', formality, inputs.q1free);
+      if (wrapped) { sentences.push(wrapped); sources.push('q1'); }
+    } else if (inputs.q1) {
       sentences.push(pick(tpl.q1)(inputs.q1));
       sources.push('q1');
     }
 
     // --- Q2 ---
-    if (inputs.q2) {
+    if (inputs.q2free) {
+      const wrapped = wrapFreeText('q2', formality, inputs.q2free);
+      if (wrapped) { sentences.push(wrapped); sources.push('q2'); }
+    } else if (inputs.q2) {
       sentences.push(pick(tpl.q2)(inputs.q2));
       sources.push('q2');
     } else if (inputs.q2wasSkipped && Math.random() < 0.5) {
@@ -1033,7 +1158,10 @@ function buildReview(personality, formality, inputs) {
     }
 
     // --- Q3（タイプ別に生成） ---
-    if (inputs.q3) {
+    if (inputs.q3free) {
+      const wrapped = wrapFreeText('q3', formality, inputs.q3free);
+      if (wrapped) { sentences.push(wrapped); sources.push('q3'); }
+    } else if (inputs.q3) {
       const q3data = inputs.q3;
 
       // 効果系
@@ -1054,19 +1182,22 @@ function buildReview(personality, formality, inputs) {
         sentences.push(pick(Q3_SPECIAL[formality].impression));
         sources.push('q3');
       }
-    } else if (inputs.q3raw) {
-      sentences.push(pick(tpl.q3)(inputs.q3raw));
-      sources.push('q3');
     }
 
     // --- Q4 ---
-    if (inputs.q4) {
+    if (inputs.q4free) {
+      const wrapped = wrapFreeText('q4', formality, inputs.q4free);
+      if (wrapped) { sentences.push(wrapped); sources.push('q4'); }
+    } else if (inputs.q4) {
       sentences.push(pick(tpl.q4)(inputs.q4));
       sources.push('q4');
     }
 
     // --- Q5 ---
-    if (inputs.q5) {
+    if (inputs.q5free) {
+      const wrapped = wrapFreeText('q5', formality, inputs.q5free);
+      if (wrapped) { sentences.push(wrapped); sources.push('q5'); }
+    } else if (inputs.q5) {
       sentences.push(pick(tpl.q5)(inputs.q5));
       sources.push('q5');
     }
@@ -1075,18 +1206,36 @@ function buildReview(personality, formality, inputs) {
     if (findConsecutiveEnding(sentences) === -1) break;
   }
 
-  // 3. 接続詞を自然に挿入
-  //    - Q1→Q2: 遷移接続詞（connectors）
-  //    - Q2→Q3: 遷移接続詞（connectors）← 話題が切り替わるため
-  //    - Q3→Q4, Q4→Q5 等: 追加接続詞（midConnectors）
+  // 2.5. friendly/cheerful の場合、Q3・Q4の文末を確率で「！」に変換
+  if (personality === 'friendly' || personality === 'cheerful') {
+    const exclamProb = personality === 'cheerful' ? 0.5 : 0.35;
+    for (let i = 0; i < sentences.length; i++) {
+      if (sources[i] === 'q3' || sources[i] === 'q4') {
+        if (Math.random() < exclamProb && !sentences[i].endsWith('！')) {
+          // 末尾の。を！に置換
+          sentences[i] = sentences[i].replace(/。$/, '！');
+        }
+      }
+    }
+  }
+
+  // 3. 接続詞を自然に挿入（頻度を控えめに）
+  //    - Q1→Q2, Q2→Q3: 遷移接続詞（connectors）— 確率低め
+  //    - Q3→Q4, Q4→Q5 等: 追加接続詞（midConnectors）— さらに低め
+  //    - 自由入力文の前には接続詞を付けない（既にwrapFreeTextで文脈付け済み）
   let final = [];
   let lastConnector = '';
+  const isFreeText = (src) => {
+    return inputs[src + 'free'] ? true : false;
+  };
   for (let i = 0; i < sentences.length; i++) {
     let s = sentences[i];
     if (i === 0) {
       // 1文目はそのまま
       final.push(s);
     } else {
+      // 自由入力文の前には接続詞を付けない
+      const curIsFree = isFreeText(sources[i]);
       // 前の文と今の文の出典を比較して接続詞の種類を決定
       const prevSrc = sources[i - 1];
       const curSrc  = sources[i];
@@ -1094,13 +1243,16 @@ function buildReview(personality, formality, inputs) {
                            (prevSrc === 'q2' && curSrc === 'q3') ||
                            (prevSrc === 'q1' && curSrc === 'q3');
 
-      if (isTopicShift && Math.random() < 0.45) {
-        // 話題の転換 → 遷移接続詞
+      if (curIsFree) {
+        // 自由入力文 → 接続詞なし
+        final.push(s);
+      } else if (isTopicShift && Math.random() < 0.25) {
+        // 話題の転換 → 遷移接続詞（低頻度）
         const conn = pickExcluding(tpl.connectors, lastConnector);
         lastConnector = conn;
         final.push(conn + s);
-      } else if (!isTopicShift && i >= 2 && Math.random() < 0.4) {
-        // 同じ話題の続き・補足 → 追加接続詞
+      } else if (!isTopicShift && i >= 2 && Math.random() < 0.2) {
+        // 同じ話題の続き・補足 → 追加接続詞（さらに低頻度）
         let conn = pickExcluding(tpl.midConnectors, lastConnector);
         lastConnector = conn;
         final.push(conn + s);
@@ -1110,7 +1262,41 @@ function buildReview(personality, formality, inputs) {
     }
   }
 
-  return opener + '\n' + final.join('\n');
+  // 4. 文ごとに改行を入れ、ランダムに空行を挟んで見た目に変化をつける
+  //    パターン: A=全て改行のみ, B=途中1箇所だけ空行, C=2-3箇所空行
+  let result = opener;
+  if (final.length <= 1) {
+    result += final.join('');
+  } else {
+    const pattern = Math.random();
+    if (pattern < 0.3) {
+      // パターンA: 全て改行のみ（空行なし）
+      result += final.join('\n');
+    } else if (pattern < 0.7) {
+      // パターンB: 途中1箇所だけ空行を入れる
+      const breakIdx = 1 + Math.floor(Math.random() * (final.length - 1));
+      for (let i = 0; i < final.length; i++) {
+        if (i === 0) {
+          result += final[i];
+        } else if (i === breakIdx) {
+          result += '\n\n' + final[i];
+        } else {
+          result += '\n' + final[i];
+        }
+      }
+    } else {
+      // パターンC: 各文の間にランダムで空行（約30%の確率）
+      for (let i = 0; i < final.length; i++) {
+        if (i === 0) {
+          result += final[i];
+        } else {
+          result += (Math.random() < 0.3 ? '\n\n' : '\n') + final[i];
+        }
+      }
+    }
+  }
+
+  return result;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1130,19 +1316,29 @@ function generateReview() {
   const personalityChip = document.querySelector('.chip[data-personality].selected');
   const personality = personalityChip ? personalityChip.dataset.personality : 'friendly';
 
+  // チップ選択 vs 自由入力を判定
+  const chipFlag = {};
+  ['q1','q2','q3','q4','q5'].forEach(qId => {
+    chipFlag[qId] = isChipInput(qId, raw[qId]);
+  });
+
   // 入力値を自然な表現に変換
   const isQ2Skip = raw.q2 === '特に何もしていなかった' ||
                    raw.q2.replace(/、/g, '').trim() === '特に何もしていなかった';
 
-  const q3processed = processInput('q3', raw.q3);
-
   const inputs = {
-    q1: processInput('q1', raw.q1),
-    q2: processInput('q2', raw.q2),
-    q3: q3processed,
-    q3raw: (!q3processed && raw.q3) ? raw.q3 : null,
-    q4: processInput('q4', raw.q4),
-    q5: processInput('q5', raw.q5),
+    // チップ選択時 → WORD_MAP経由でテンプレート挿入用に変換
+    q1: chipFlag.q1 ? processInput('q1', raw.q1) : null,
+    q2: chipFlag.q2 ? processInput('q2', raw.q2) : null,
+    q3: chipFlag.q3 ? processInput('q3', raw.q3) : null,
+    q4: chipFlag.q4 ? processInput('q4', raw.q4) : null,
+    q5: chipFlag.q5 ? processInput('q5', raw.q5) : null,
+    // 自由入力時 → wrapFreeText で文脈フレーム付きの自然な文にする（raw値を渡す）
+    q1free: (!chipFlag.q1 && raw.q1) ? raw.q1 : null,
+    q2free: (!chipFlag.q2 && raw.q2 && !isQ2Skip) ? raw.q2 : null,
+    q3free: (!chipFlag.q3 && raw.q3) ? raw.q3 : null,
+    q4free: (!chipFlag.q4 && raw.q4) ? raw.q4 : null,
+    q5free: (!chipFlag.q5 && raw.q5) ? raw.q5 : null,
     q2wasSkipped: isQ2Skip || !raw.q2,
   };
 
