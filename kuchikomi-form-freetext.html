@@ -1,0 +1,1317 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>口コミ投稿のお手伝い</title>
+  <style>
+    :root {
+      --primary:       #7A5230;
+      --primary-light: #B07D4A;
+      --primary-grad:  linear-gradient(135deg, #7A5230 0%, #C49A5A 100%);
+      --google-grad:   linear-gradient(135deg, #4285F4 0%, #34A853 100%);
+      --bg:            #FDF8F1;
+      --card-bg:       #FFFFFF;
+      --beige:         #F5ECD8;
+      --beige-dark:    #DEC99A;
+      --text:          #3A2518;
+      --text-sub:      #7A6050;
+      --border:        #E2CFA8;
+      --success:       #5A8A3C;
+      --chip-bg:       #F0E5D0;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, 'Yu Gothic', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .header {
+      background: var(--primary-grad);
+      color: #fff;
+      text-align: center;
+      padding: 36px 20px 28px;
+    }
+    .header-icon { font-size: 2.4rem; margin-bottom: 8px; }
+    .header h1  { font-size: 1.25rem; font-weight: bold; letter-spacing: .05em; margin-bottom: 8px; }
+    .header p   { font-size: .84rem; opacity: .92; line-height: 1.7; }
+
+    .progress-wrap { background: rgba(255,255,255,.25); height: 4px; margin-top: 20px; border-radius: 2px; }
+    .progress-bar  { height: 4px; background: #fff; border-radius: 2px; transition: width .4s ease; width: 0%; }
+
+    .container { max-width: 600px; margin: 0 auto; padding: 20px 14px 40px; }
+
+    .q-card {
+      background: #fff;
+      border-radius: 18px;
+      padding: 22px 18px;
+      margin-bottom: 14px;
+      box-shadow: 0 2px 14px rgba(122,82,48,.09);
+      border: 1px solid var(--border);
+    }
+    .q-badge {
+      display: inline-block;
+      background: var(--primary-grad);
+      color: #fff;
+      border-radius: 20px;
+      padding: 3px 13px;
+      font-size: .75rem;
+      font-weight: bold;
+      letter-spacing: .04em;
+      margin-bottom: 11px;
+    }
+    .q-label {
+      font-size: 1rem;
+      font-weight: bold;
+      line-height: 1.55;
+      margin-bottom: 5px;
+    }
+    .q-hint {
+      font-size: .8rem;
+      color: var(--text-sub);
+      line-height: 1.65;
+      margin-bottom: 11px;
+    }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 10px; }
+    .chip {
+      background: var(--chip-bg);
+      border: 1.5px solid var(--beige-dark);
+      border-radius: 20px;
+      padding: 5px 13px;
+      font-size: .8rem;
+      color: var(--text);
+      cursor: pointer;
+      transition: all .18s;
+      user-select: none;
+      line-height: 1.4;
+    }
+    .chip.selected {
+      background: var(--primary-light);
+      color: #fff;
+      border-color: var(--primary-light);
+    }
+
+    .personality-chips .chip.selected {
+      background: #6B5B3E;
+      border-color: #6B5B3E;
+    }
+
+    textarea {
+      width: 100%;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: .95rem;
+      font-family: inherit;
+      color: var(--text);
+      background: var(--bg);
+      resize: vertical;
+      min-height: 90px;
+      transition: border-color .2s;
+      line-height: 1.65;
+    }
+    textarea:focus { outline: none; border-color: var(--primary-light); background: #fff; }
+    textarea::placeholder { color: #C4A97A; }
+
+    .gen-btn {
+      width: 100%;
+      background: var(--primary-grad);
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      padding: 18px;
+      font-size: 1.05rem;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 6px;
+      letter-spacing: .06em;
+      transition: opacity .2s, transform .1s;
+      box-shadow: 0 4px 14px rgba(122,82,48,.28);
+    }
+    .gen-btn:active { transform: scale(.98); opacity: .9; }
+
+    .result-section { display: none; margin-top: 10px; }
+    .result-section.visible { display: block; }
+
+    .result-card {
+      background: #fff;
+      border-radius: 18px;
+      padding: 22px 18px;
+      border: 2px solid var(--primary-light);
+      box-shadow: 0 4px 18px rgba(122,82,48,.14);
+    }
+    .result-card + .result-card { margin-top: 18px; }
+    .result-title {
+      font-size: .85rem;
+      font-weight: bold;
+      color: var(--primary);
+      margin-bottom: 13px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .result-text {
+      font-size: .96rem;
+      line-height: 1.9;
+      color: var(--text);
+      background: var(--bg);
+      border-radius: 11px;
+      padding: 15px 14px;
+      border: 1px solid var(--border);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .copy-btn {
+      width: 100%;
+      background: #fff;
+      color: var(--primary);
+      border: 2px solid var(--primary-light);
+      border-radius: 13px;
+      padding: 16px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 12px;
+      letter-spacing: .03em;
+      transition: all .2s;
+    }
+    .copy-btn:hover   { background: var(--beige); }
+    .copy-btn.copied  { background: var(--success); color: #fff; border-color: var(--success); }
+
+    .google-btn {
+      display: block;
+      width: 100%;
+      background: var(--google-grad);
+      color: #fff;
+      border: none;
+      border-radius: 13px;
+      padding: 18px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 12px;
+      text-align: center;
+      text-decoration: none;
+      letter-spacing: .04em;
+      transition: opacity .2s, transform .1s;
+      box-shadow: 0 4px 14px rgba(66,133,244,.28);
+    }
+    .google-btn:active { transform: scale(.98); opacity: .9; }
+
+    .footer-note {
+      text-align: center;
+      font-size: .78rem;
+      color: var(--text-sub);
+      margin-top: 18px;
+      line-height: 1.75;
+    }
+
+    .divider {
+      text-align: center;
+      color: var(--text-sub);
+      font-size: .78rem;
+      margin: 18px 0 4px;
+      position: relative;
+    }
+    .divider::before, .divider::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      width: 38%;
+      height: 1px;
+      background: var(--border);
+    }
+    .divider::before { left: 0; }
+    .divider::after  { right: 0; }
+
+    .version-label {
+      display: inline-block;
+      background: var(--beige);
+      border: 1.5px solid var(--beige-dark);
+      border-radius: 8px;
+      padding: 3px 10px;
+      font-size: .73rem;
+      font-weight: bold;
+      color: var(--primary);
+      margin-bottom: 10px;
+      letter-spacing: .05em;
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-icon">🌿</div>
+  <h1>口コミ投稿のお手伝い</h1>
+  <p>質問に答えるだけで口コミ文章を自動作成します<br>ぜひご協力をお願いいたします 🙏</p>
+  <div class="progress-wrap">
+    <div class="progress-bar" id="progress-bar"></div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ─── Q1 ─── -->
+  <div class="q-card">
+    <div class="q-badge">Q1</div>
+    <div class="q-label">来院前はどのようなお悩み・症状がありましたか？</div>
+    <div class="q-hint">自由に入力してください</div>
+    <textarea id="q1" placeholder="例）長年の腰痛と肩こりに悩んでいました"></textarea>
+  </div>
+
+  <!-- ─── Q2 ─── -->
+  <div class="q-card">
+    <div class="q-badge">Q2</div>
+    <div class="q-label">これまでにどんな対策をされていましたか？</div>
+    <div class="q-hint">病院・マッサージ・湿布など、試してきたことを教えてください</div>
+    <textarea id="q2" placeholder="例）病院で薬をもらっていましたが改善しませんでした"></textarea>
+  </div>
+
+  <!-- ─── Q3 ─── -->
+  <div class="q-card">
+    <div class="q-badge">Q3</div>
+    <div class="q-label">施術を受けてみていかがでしたか？</div>
+    <div class="q-hint">効果・変化・気づいたことなど、なんでも教えてください</div>
+    <textarea id="q3" placeholder="例）初回から体が軽くなるのを実感できました"></textarea>
+  </div>
+
+  <!-- ─── Q4 ─── -->
+  <div class="q-card">
+    <div class="q-badge">Q4</div>
+    <div class="q-label">先生の対応や院の雰囲気はいかがでしたか？</div>
+    <div class="q-hint">接客・清潔感・居心地など感じたことを自由に</div>
+    <textarea id="q4" placeholder="例）先生が親切で、初めてでも安心して受けられました"></textarea>
+  </div>
+
+  <!-- ─── Q5 ─── -->
+  <div class="q-card">
+    <div class="q-badge">Q5</div>
+    <div class="q-label">どんな方におすすめしたいですか？<br>総合的な感想もぜひお聞かせください</div>
+    <div class="q-hint">同じお悩みを持つ方へのメッセージなど</div>
+    <textarea id="q5" placeholder="例）同じ悩みを持つ方にぜひ試してほしいです"></textarea>
+  </div>
+
+  <!-- ─── Q6: Personality Selection ─── -->
+  <div class="q-card">
+    <div class="q-badge">Q6</div>
+    <div class="q-label">作成する文章のトーンを選んでください</div>
+    <div class="q-hint">生成される口コミのニュアンスが変わります</div>
+    <div class="chips personality-chips">
+      <span class="chip" data-personality="polite_type">丁寧・きちんとした</span>
+      <span class="chip" data-personality="friendly">フレンドリー・親しみやすい</span>
+      <span class="chip" data-personality="calm">落ち着いた・控えめ</span>
+      <span class="chip" data-personality="cheerful">明るい・元気いっぱい</span>
+    </div>
+  </div>
+
+  <!-- ─── GENERATE BUTTON ─── -->
+  <button class="gen-btn" onclick="generateReview()">✨ 口コミ文章を作成する</button>
+
+  <!-- ─── RESULT SECTION ─── -->
+  <div class="result-section" id="result-section">
+
+    <!-- 標準バージョン -->
+    <div class="result-card">
+      <div class="version-label">標準バージョン</div>
+      <div class="result-title">📝 カジュアルな口コミ文章</div>
+      <div class="result-text" id="result-standard"></div>
+      <button class="copy-btn" data-target="result-standard" onclick="copyText(this)">
+        📋 この文章をコピーする
+      </button>
+    </div>
+
+    <!-- 丁寧バージョン -->
+    <div class="result-card">
+      <div class="version-label">丁寧バージョン</div>
+      <div class="result-title">📝 丁寧な口コミ文章</div>
+      <div class="result-text" id="result-polite"></div>
+      <button class="copy-btn" data-target="result-polite" onclick="copyText(this)">
+        📋 この文章をコピーする
+      </button>
+    </div>
+
+    <div class="divider">お好みの文章をコピー後、Googleへ投稿</div>
+
+    <a href="https://g.page/r/CSFGL1IBIyJhEBE/review" target="_blank" rel="noopener noreferrer" class="google-btn">
+      🗺️ Googleに口コミを投稿する
+    </a>
+
+    <p class="footer-note">
+      ① 上の「コピー」ボタンでお好みの文章をコピーします<br>
+      ② 「Googleに投稿する」を押してレビュー画面を開きます<br>
+      ③ テキスト欄に貼り付けて投稿完了です！<br><br>
+      <span style="font-size:.72rem; color:#9A8570;">※このツールは、実際の体験にもとづく感想を整理するための下書き補助です。<br>
+      内容を確認のうえ、ご自身の判断で貼り付け後修正してご利用ください。</span><br><br>
+      ご協力ありがとうございます 😊
+    </p>
+
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  口コミ文章生成エンジン v4（自由入力専用・パーソナリティ対応）
+//
+//  ■ プロンプト（生成ルール）
+//  ・自然な日本語ネイティブライターの文章にする
+//  ・実体験ベースで書く
+//  ・過剰表現を避ける ・口コミっぽい文体にする
+//  ・同じ表現・語尾を繰り返さない
+//  ・断定しすぎない ・宣伝調にしない
+//  ・書き出し・構成・語尾を毎回ランダムに変える
+//  ・接続詞を自然に使う
+//  ・少し主観的な表現で人間らしさを出す
+//  ・テンプレ的な文章構造を避ける
+//  ■ NG: 単調な繰り返し / 「最高」「おすすめです」多用 / 宣伝調
+// ═══════════════════════════════════════════════════════════
+
+// ─── UI: 性格チップ選択（単一選択） ───
+document.querySelectorAll('.chip[data-personality]').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.chip[data-personality]').forEach(c => c.classList.remove('selected'));
+    chip.classList.add('selected');
+    updateProgress();
+  });
+});
+
+document.querySelectorAll('textarea').forEach(ta => {
+  ta.addEventListener('input', updateProgress);
+});
+
+function updateProgress() {
+  const ids = ['q1','q2','q3','q4','q5'];
+  const personalitySelected = document.querySelector('.chip[data-personality].selected') !== null;
+  const filled = ids.filter(id => document.getElementById(id).value.trim()).length;
+  const total = personalitySelected ? 6 : 5;
+  const progress = personalitySelected ? (filled / total * 100) : (filled / 5 * 100);
+  document.getElementById('progress-bar').style.width = progress + '%';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ユーティリティ
+// ═══════════════════════════════════════════════════════════
+function pick(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+function pickExcluding(arr, ...excludes) {
+  const f = arr.filter(x => !excludes.includes(x));
+  return f.length ? pick(f) : pick(arr);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  共通：丁寧語の文末パターン（完成された文かどうかを判定するために使用）
+//  全てのwrap関数で統一的に参照する
+// ═══════════════════════════════════════════════════════════
+const POLITE_ENDINGS = [
+  'ました', 'でした', 'です', 'ます', 'ません',
+  'ています', 'ております', 'ませんでした',
+  'ございます', 'おります', 'いたします',
+];
+function isCompleteSentence(v) {
+  return POLITE_ENDINGS.some(e => v.endsWith(e));
+}
+
+// 自由入力テキストをクリーンアップ（末尾句読点は付けない→wrapFreeTextで付与）
+function cleanFreeText(text) {
+  if (!text) return null;
+  let cleaned = text.trim();
+  if (!cleaned) return null;
+  // 末尾の句読点を除去
+  cleaned = cleaned.replace(/[。、！？!?\s]+$/g, '');
+  // 文中の。を、に変換（文の途中に。が出ないように）
+  cleaned = cleaned.replace(/。/g, '、');
+  cleaned = cleaned.replace(/、{2,}/g, '、');
+  cleaned = cleaned.replace(/、+$/g, '');
+  if (!cleaned) return null;
+  return cleaned;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  Q1: 来院前の悩みであることを明示するプレフィックス
+//  ユーザーが既に「来院前」「ここに来る前」等を書いていたら付加しない
+// ═══════════════════════════════════════════════════════════
+const Q1_ALREADY_KEYWORDS = ['来院前', 'ここに来る前', '以前から', '以前は', '前から', '前は', '通う前', '受ける前', '長年', 'ずっと'];
+
+// 入力が文的（動詞・形容詞で終わる）かどうかを判定
+function isSentenceLike(text) {
+  // 動詞的語尾、形容詞的語尾をチェック（ナ形容詞・名詞は除外）
+  const sentenceEndings = [
+    'ある', 'いる', 'ない', 'れる', 'れた', 'った', 'した',
+    'つらい', '痛い', '悪い', '重い', 'ひどい', 'にくい',
+    'ず', 'たい', 'がち', '不安', '心配'
+  ];
+  return sentenceEndings.some(e => text.endsWith(e));
+}
+
+// ナ形容詞（不安、心配等）で終わるかチェック → 「こと」の前に「な」が必要
+const NA_ADJ_ENDINGS = ['不安', '心配'];
+function nominalize(v) {
+  // ナ形容詞で終わる → 「なこと」
+  if (NA_ADJ_ENDINGS.some(e => v.endsWith(e))) return v + 'なこと';
+  // その他の動詞・形容詞 → 「こと」
+  return v + 'こと';
+}
+
+// 過去形の語尾（「辛かった」「通った」「痛めた」等）
+const PAST_ENDINGS = ['った', 'した', 'れた', 'んだ', 'だった', 'なかった', 'めた', 'せた', 'てた', 'けた', 'えた', 'べた', 'ねた', 'げた'];
+function isPastTense(text) {
+  // 2文字以下は誤検出の恐れがあるので除外
+  if (text.length <= 2) return false;
+  return PAST_ENDINGS.some(e => text.endsWith(e));
+}
+
+// Q1用テンプレート：現在形の文的入力は「こと」で名詞化して自然に接続
+const Q1_SENTENCE_TPL = {
+  standard: [
+    v => `来院前は${nominalize(v)}に悩んでいて、どうにかしたいと思っていました。`,
+    v => `ここに来る前は${nominalize(v)}がつらくて、改善したいと思っていました。`,
+    v => `以前から${nominalize(v)}が気になっていて、何とかしたいと感じていました。`,
+    v => `前から${nominalize(v)}に悩んでいて、改善したいなと思っていました。`,
+    v => `通う前は${nominalize(v)}で、日常生活にも影響が出ていました。`,
+    v => `こちらに来る前は${nominalize(v)}に困っていて、何とかしたいと思っていました。`,
+  ],
+  polite: [
+    v => `来院前は${nominalize(v)}に悩んでおり、どうにかしたいと考えておりました。`,
+    v => `ここに来る前は${nominalize(v)}がつらく、改善したいと思っておりました。`,
+    v => `以前から${nominalize(v)}が気になっており、何とかしたいと思っておりました。`,
+    v => `前から${nominalize(v)}に悩んでおり、改善したいと考えておりました。`,
+    v => `通う前は${nominalize(v)}で、日常生活にも支障が出ておりました。`,
+    v => `こちらにお伺いする前は${nominalize(v)}に困っておりました。`,
+  ],
+};
+
+// Q1用テンプレート：過去形の入力は「ので」で自然に接続（「辛かったので、何とかしたいと…」）
+const Q1_PAST_TPL = {
+  standard: [
+    v => `来院前は${v}ので、何とかしたいと思っていました。`,
+    v => `ここに来る前は${v}ので、改善したいと思っていました。`,
+    v => `以前から${v}ので、何とかしたいと感じていました。`,
+    v => `前から${v}ので、改善したいなと思っていました。`,
+    v => `通う前は${v}ので、日常生活にも影響が出ていました。`,
+    v => `こちらに来る前は${v}ので、何とかしたいと思っていました。`,
+  ],
+  polite: [
+    v => `来院前は${v}ため、何とかしたいと考えておりました。`,
+    v => `ここに来る前は${v}ので、改善したいと思っておりました。`,
+    v => `以前から${v}ため、何とかしたいと思っておりました。`,
+    v => `前から${v}ので、改善したいと考えておりました。`,
+    v => `通う前は${v}ため、日常生活にも支障が出ておりました。`,
+    v => `こちらにお伺いする前は${v}ので、何とかしたいと思っておりました。`,
+  ],
+};
+
+const Q1_NOUN_TPL = {
+  standard: [
+    v => `来院前は${v}で悩んでいて、どうにかしたいと思っていました。`,
+    v => `ここに来る前は${v}がつらくて、改善したいなと思っていました。`,
+    v => `以前から${v}という症状があって、何とかしたいと感じていました。`,
+    v => `前から${v}が気になっていて、なんとかならないかなと思っていました。`,
+    v => `通う前は${v}に悩んでいて、日常生活にも影響が出ていました。`,
+    v => `こちらに来る前は${v}で困っていて、何とかしたいと思っていました。`,
+  ],
+  polite: [
+    v => `来院前は${v}に悩んでおり、改善したいと考えておりました。`,
+    v => `ここに来る前は${v}が気になっておりまして、何とかしたいと思っておりました。`,
+    v => `以前から${v}という症状がございまして、対策を考えておりました。`,
+    v => `前から${v}が気になっており、改善の方法を探しておりました。`,
+    v => `通う前は${v}に悩んでおり、日常生活にも支障が出ておりました。`,
+    v => `こちらにお伺いする前は${v}で困っておりました。`,
+  ],
+};
+
+function wrapQ1(formality, v) {
+  // 既に完成された文（ました・です等で終わる）ならそのまま返す
+  if (isCompleteSentence(v)) return v + '。';
+
+  // ユーザーが既に来院前の文脈を含んでいるか判定
+  const alreadyHasContext = Q1_ALREADY_KEYWORDS.some(kw => v.includes(kw));
+  if (alreadyHasContext) {
+    // 短いフレーズ → 文的か名詞的かで補完を変える
+    if (isSentenceLike(v)) {
+      return v + 'ので、何とかしたいと思っていました。';
+    }
+    return v + 'で悩んでいて、何とかしたいと思っていました。';
+  }
+  // 過去形（「辛かった」「痛めた」等）は「ので」接続テンプレートを使う
+  // ※ isSentenceLike に引っかからない過去形（「痛めた」等）もここでキャッチする
+  if (isPastTense(v)) {
+    return pick(Q1_PAST_TPL[formality])(v);
+  }
+  // 現在形の文的入力は「こと」で名詞化して接続
+  if (isSentenceLike(v)) {
+    return pick(Q1_SENTENCE_TPL[formality])(v);
+  }
+  // 名詞的入力
+  return pick(Q1_NOUN_TPL[formality])(v);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  Q2: 対策内容を自然な文にする
+//  - 場所系（病院・整形外科 etc.）→「〇〇に行ったけど」
+//  - 動作系（ストレッチ・テーピング etc.）→「〇〇をしたけど」
+//  - 既に結果まで書かれていたら（改善しない、変わらない etc.）重複しない
+// ═══════════════════════════════════════════════════════════
+const Q2_PLACE_KEYWORDS = ['病院', '整形外科', '整体', '接骨院', '整骨院', '鍼灸', 'マッサージ', 'クリニック', '医院', '外科', '内科', '治療院', 'カイロ'];
+const Q2_RESULT_KEYWORDS = ['改善', '変わら', '効果', '良くなら', 'よくなら', '治ら', 'ダメ', 'だめ', '一時的', 'その場しのぎ', '意味がな', '意味なか', 'しのぎ', 'けど', 'けれど', 'が、'];
+
+const Q2_ACTION_SUFFIXES_STD = [
+  'してみたけど、あまり変わりませんでした。',
+  'を試してみたけど、改善しませんでした。',
+  'もやっていたのですが、一時的なものでした。',
+  'を続けていたのですが、あまり効果がありませんでした。',
+  'も試しましたが、なかなか良くなりませんでした。',
+  'をしていたのですが、根本的には変わりませんでした。',
+];
+const Q2_PLACE_SUFFIXES_STD = [
+  'に行ったけど、あまり変わりませんでした。',
+  'にも通ってみたけど、改善しませんでした。',
+  'にも行ってみたのですが、一時的なものでした。',
+  'に通っていたのですが、あまり効果がありませんでした。',
+  'にも行きましたが、なかなか良くなりませんでした。',
+  'に通っていたのですが、根本的な改善にはなりませんでした。',
+];
+const Q2_ACTION_SUFFIXES_POL = [
+  'を試みたのですが、あまり変わりませんでした。',
+  'を試してみたのですが、改善には至りませんでした。',
+  'も続けておりましたが、一時的なものでございました。',
+  'を続けておりましたが、あまり効果を感じられませんでした。',
+  'も試みましたが、なかなか良くなりませんでした。',
+  'をしておりましたが、根本的な改善にはなりませんでした。',
+];
+const Q2_PLACE_SUFFIXES_POL = [
+  'に通っておりましたが、あまり変わりませんでした。',
+  'にもお伺いしたのですが、改善には至りませんでした。',
+  'にも通ってみたのですが、一時的なものでございました。',
+  'に通っておりましたが、あまり効果を感じられませんでした。',
+  'にも伺いましたが、なかなか良くなりませんでした。',
+  'に通っておりましたが、根本的な改善にはなりませんでした。',
+];
+
+// 入力の末尾が動詞で終わっているか（「通っていた」「行った」「受けていた」等）
+const Q2_VERB_ENDINGS = ['通っていた', '行っていた', '行った', '受けていた', '受けた', 'もらっていた', 'もらった', '試した', 'やっていた', 'やった', 'していた', 'してた', 'してみた', '使っていた', '使った', '飲んでいた', '飲んだ', '貼っていた', '塗っていた', 'いました', 'ていた'];
+
+// 動詞を含む入力に対して結果フレーズだけを付ける
+const Q2_RESULT_ONLY_STD = [
+  'のですが、あまり変わりませんでした。',
+  'のですが、改善しませんでした。',
+  'のですが、一時的なものでした。',
+  'のですが、あまり効果がありませんでした。',
+  'のですが、なかなか良くなりませんでした。',
+  'のですが、根本的には変わりませんでした。',
+];
+const Q2_RESULT_ONLY_POL = [
+  'のですが、あまり変わりませんでした。',
+  'のですが、改善には至りませんでした。',
+  'のですが、一時的なものでございました。',
+  'のですが、あまり効果を感じられませんでした。',
+  'のですが、なかなか良くなりませんでした。',
+  'のですが、根本的な改善にはなりませんでした。',
+];
+
+// 「対策していなかった」系の入力を検出 → Q2をスキップする
+const Q2_NO_ACTION_KEYWORDS = [
+  '特になし', '特にない', 'なし', 'ない', 'していない', 'してない',
+  'していなかった', 'してなかった', '何もして', '何もし',
+  '対策はして', '対策して', '何も対策', '特に何も',
+  '様子見', '放置', '放っておいた', 'ほったらかし',
+  '我慢', 'がまん', '耐えて', '諦めて', 'あきらめて',
+  'していません', 'ありません', 'ないです',
+];
+
+function wrapQ2(formality, v) {
+  // 「対策していなかった」系の入力 → 口コミに反映しない（null）
+  const isNoAction = Q2_NO_ACTION_KEYWORDS.some(kw => v.includes(kw));
+  if (isNoAction) return null;
+
+  // 既に完成された文（ました・です等で終わる）ならそのまま返す
+  if (isCompleteSentence(v)) return v + '。';
+
+  // ユーザーが既に結果フレーズを含んでいるか判定
+  const alreadyHasResult = Q2_RESULT_KEYWORDS.some(kw => v.includes(kw));
+  if (alreadyHasResult) {
+    // 「〜けど変わらなくて」のようなカジュアル文末
+    return v + '。';
+  }
+
+  // 末尾が動詞で終わっている場合 → 結果フレーズだけを付ける（動詞の重複を防ぐ）
+  const alreadyHasVerb = Q2_VERB_ENDINGS.some(kw => v.endsWith(kw));
+  if (alreadyHasVerb) {
+    return v + pick(formality === 'polite' ? Q2_RESULT_ONLY_POL : Q2_RESULT_ONLY_STD);
+  }
+
+  // 場所系 or 動作系を判定
+  const isPlace = Q2_PLACE_KEYWORDS.some(kw => v.includes(kw));
+
+  if (formality === 'polite') {
+    return isPlace ? v + pick(Q2_PLACE_SUFFIXES_POL) : v + pick(Q2_ACTION_SUFFIXES_POL);
+  } else {
+    return isPlace ? v + pick(Q2_PLACE_SUFFIXES_STD) : v + pick(Q2_ACTION_SUFFIXES_STD);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  Q3: 施術の感想であることを明示するプレフィックス
+//  ユーザーが既に「施術」「通って」等を書いていたら付加しない
+// ═══════════════════════════════════════════════════════════
+const Q3_ALREADY_KEYWORDS = ['施術', '通って', '通い始め', '受けて', '受けた', '受けてみ', 'ここに来て', '来院して', '治療を', '診てもらっ'];
+
+const Q3_PREFIXES = {
+  standard: [
+    v => `施術を受けてみて、${v}と感じています。`,
+    v => `ここに通ってからは、${v}と実感しています。`,
+    v => `実際に施術を受けてみたら、${v}というのが素直な感想です。`,
+    v => `通い始めてから、${v}のを感じています。`,
+    v => `こちらで診ていただいてから、${v}と感じるようになりました。`,
+    v => `施術を受けたところ、${v}のがわかりました。`,
+  ],
+  polite: [
+    v => `施術を受けてみたところ、${v}と感じております。`,
+    v => `こちらに通わせていただいてからは、${v}と実感しております。`,
+    v => `実際に施術を受けてみて、${v}というのが率直な感想でございます。`,
+    v => `通い始めてから、${v}のを感じております。`,
+    v => `こちらで診ていただいてからは、${v}と感じるようになりました。`,
+    v => `施術を受けましたところ、${v}という変化がございました。`,
+  ],
+};
+
+// 完成文に施術プレフィックスだけ付ける（「と感じています」は省略）
+const Q3_COMPLETE_PREFIXES = {
+  standard: [
+    '施術を受けてみて、', 'ここに通ってからは、', '通い始めてから、',
+    'こちらで診ていただいてから、', '実際に施術を受けてみたら、',
+    'こちらに来てからは、',
+  ],
+  polite: [
+    '施術を受けてみたところ、', 'こちらに通わせていただいてからは、',
+    '通い始めてから、', 'こちらで診ていただいてからは、',
+    '実際に施術を受けてみて、', '施術を受けましたところ、',
+  ],
+};
+
+function wrapQ3(formality, v) {
+  // ユーザーが既に施術の文脈を含んでいるか判定
+  const alreadyHasContext = Q3_ALREADY_KEYWORDS.some(kw => v.includes(kw));
+  if (alreadyHasContext) {
+    // 完成された文ならそのまま返す（既に施術文脈あり）
+    if (isCompleteSentence(v)) return v + '。';
+    // 短いフレーズ → 文末補完
+    return v + 'と感じています。';
+  }
+
+  // 完成された文（ました等で終わる）→ プレフィックスだけ付けてサフィックスは省略
+  if (isCompleteSentence(v)) {
+    const prefix = pick(Q3_COMPLETE_PREFIXES[formality]);
+    return prefix + v + '。';
+  }
+
+  // 未完成の入力 → フルテンプレート（プレフィックス＋サフィックス）
+  const tpls = Q3_PREFIXES[formality];
+  return pick(tpls)(v);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  Q4: 先生の対応 / 院の雰囲気 / 一般的な感想 を判定して
+//  適切なテンプレートで自然な文を生成する
+// ═══════════════════════════════════════════════════════════
+const Q4_TEACHER_KEYWORDS = [
+  '先生', '親切', '丁寧', '説明', '話を聞', '優しい', 'やさしい',
+  '対応', '接客', '笑顔', '明るい', '気さく', '相談', 'カウンセリング',
+  'アドバイス', '寄り添', '信頼', '安心感', 'スタッフ', '受付',
+];
+const Q4_ATMOSPHERE_KEYWORDS = [
+  '清潔', 'きれい', '綺麗', '雰囲気', 'リラックス', '落ち着',
+  '院内', '内装', 'おしゃれ', '居心地', '静か', '広い', '明るい雰囲気',
+  '予約', '通いやすい', '立地', '駐車場', 'アクセス', '便利',
+];
+
+// ─── Q4接続ヘルパー ───
+// 「の」「ので」「のも」等は動詞・イ形容詞に直接付けられるが、
+// ナ形容詞（親切、清潔 etc.）や名詞（先生、雰囲気 etc.）には「な」が必要。
+// 名詞で終わる場合は「という点」形式に変換して自然にする。
+const Q4_NA_ADJ = ['親切', '丁寧', '清潔', 'きれい', '綺麗', '安心', '便利', '静か', '素敵', '上手', '快適', '好印象', '気さく'];
+const Q4_NOUN_END = ['先生', '雰囲気', '対応', '接客', '印象', '感じ', 'スタッフ', '笑顔', '立地', '環境', '院内', '設備'];
+
+function q4Conn(v, particle) {
+  // particle: 'ので、' | 'のも' | 'のが'
+  // ナ形容詞 → 「な」を挟む: 「親切なので、」
+  if (Q4_NA_ADJ.some(e => v.endsWith(e))) return v + 'な' + particle;
+  // 名詞 → 「という点」形式: 「先生という点も」
+  if (Q4_NOUN_END.some(e => v.endsWith(e))) {
+    if (particle === 'ので、') return v + 'ということもあり、';
+    if (particle === 'のも') return v + 'という点も';
+    if (particle === 'のが') return v + 'という点が';
+    return v + 'な' + particle;
+  }
+  // 動詞・イ形容詞 → そのまま
+  return v + particle;
+}
+
+// 先生・対応に関する入力用テンプレート
+const Q4_TEACHER_TPL = {
+  standard: [
+    v => `${q4Conn(v, 'ので、')}安心して施術を受けることができました。`,
+    v => `${q4Conn(v, 'のも')}印象的で、信頼して通えています。`,
+    v => `${q4Conn(v, 'ので、')}初めてでも緊張せずに受けられました。`,
+    v => `${q4Conn(v, 'のが')}とてもよかったです。`,
+    v => `${q4Conn(v, 'ので、')}安心してお任せすることができました。`,
+  ],
+  polite: [
+    v => `${q4Conn(v, 'ので、')}安心して施術を受けることができました。`,
+    v => `${q4Conn(v, 'のも')}印象的で、信頼してお任せできております。`,
+    v => `${q4Conn(v, 'ので、')}初めてでも安心してお伺いすることができました。`,
+    v => `${q4Conn(v, 'のが')}大変よかったと感じております。`,
+    v => `${q4Conn(v, 'ので、')}安心してお任せすることができました。`,
+  ],
+};
+
+// 院の雰囲気・設備に関する入力用テンプレート
+const Q4_ATMOSPHERE_TPL = {
+  standard: [
+    v => `${q4Conn(v, 'ので、')}居心地よく通えています。`,
+    v => `${q4Conn(v, 'のも')}印象的で、気持ちよく施術を受けられました。`,
+    v => `${q4Conn(v, 'ので、')}リラックスして過ごすことができました。`,
+    v => `${q4Conn(v, 'のも')}よかったです。`,
+    v => `${q4Conn(v, 'ので、')}無理なく通い続けられそうです。`,
+  ],
+  polite: [
+    v => `${q4Conn(v, 'ので、')}大変居心地よく通えております。`,
+    v => `${q4Conn(v, 'のも')}印象的で、気持ちよく施術を受けることができました。`,
+    v => `${q4Conn(v, 'ので、')}リラックスして過ごすことができました。`,
+    v => `${q4Conn(v, 'のも')}大変よかったと感じております。`,
+    v => `${q4Conn(v, 'ので、')}無理なく通わせていただいております。`,
+  ],
+};
+
+// 両方含む場合のテンプレート
+const Q4_BOTH_TPL = {
+  standard: [
+    v => `${q4Conn(v, 'ので、')}安心して通うことができました。`,
+    v => `${q4Conn(v, 'のも')}よかったです。`,
+    v => `${q4Conn(v, 'ので、')}気持ちよく施術を受けることができました。`,
+  ],
+  polite: [
+    v => `${q4Conn(v, 'ので、')}安心して通うことができました。`,
+    v => `${q4Conn(v, 'のも')}大変よかったと感じております。`,
+    v => `${q4Conn(v, 'ので、')}気持ちよく施術を受けることができました。`,
+  ],
+};
+
+// 一般的・曖昧な感想用テンプレート（「とても良かった」「良い」等）
+// → 入力値に具体性がないため、「先生の対応」「院の雰囲気」を補った定型文にする
+const Q4_GENERAL_TPL = {
+  standard: [
+    '先生の対応や院の雰囲気がとてもよく、気持ちよく通えています。',
+    '対応も雰囲気もよく、安心して通うことができました。',
+    '先生も院の雰囲気もよく、初めてでもリラックスして受けられました。',
+    '対応も雰囲気も好印象で、居心地よく過ごせました。',
+    '先生の対応も院の雰囲気もよく、安心してお任せすることができました。',
+  ],
+  polite: [
+    '先生の対応や院の雰囲気がとてもよく、気持ちよく通えております。',
+    '対応も雰囲気もよく、安心して通うことができました。',
+    '先生も院の雰囲気もよく、初めてでもリラックスして過ごすことができました。',
+    '対応も雰囲気もよく、大変居心地よく過ごせました。',
+    '先生の対応も院の雰囲気もよく、安心してお任せすることができました。',
+  ],
+};
+
+function wrapQ4(formality, v) {
+  // 既に完成された文ならそのまま使う
+  if (isCompleteSentence(v)) return v + '。';
+
+  // 短すぎる入力（単語だけ、3文字以下）は文脈が足りないので一般テンプレートへ
+  if (v.length <= 3) {
+    return pick(Q4_GENERAL_TPL[formality]);
+  }
+
+  // カテゴリ判定
+  const isTeacher = Q4_TEACHER_KEYWORDS.some(kw => v.includes(kw));
+  const isAtmosphere = Q4_ATMOSPHERE_KEYWORDS.some(kw => v.includes(kw));
+
+  // 「先生」「雰囲気」など名詞単体の場合はq4Connで不自然になるため一般テンプレートへ
+  if (Q4_NOUN_END.some(e => v === e)) {
+    return pick(Q4_GENERAL_TPL[formality]);
+  }
+
+  // 先生の対応系
+  if (isTeacher && !isAtmosphere) {
+    return pick(Q4_TEACHER_TPL[formality])(v);
+  }
+  // 雰囲気系
+  if (isAtmosphere && !isTeacher) {
+    return pick(Q4_ATMOSPHERE_TPL[formality])(v);
+  }
+  // 両方含む場合（「先生が親切で院内も清潔」等）
+  if (isTeacher && isAtmosphere) {
+    return pick(Q4_BOTH_TPL[formality])(v);
+  }
+  // 一般的な感想（「とても良かった」等）→ 入力値は使わず、文脈を補った定型文にする
+  return pick(Q4_GENERAL_TPL[formality]);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  Q5: おすすめ・総合感想テンプレート
+//  ユーザーが既に「おすすめ」「勧め」等を書いていたら重複しない
+// ═══════════════════════════════════════════════════════════
+const Q5_ALREADY_KEYWORDS = ['おすすめ', 'オススメ', 'お勧め', 'おススメ', '勧めたい', '試してほしい', '試してみてほしい', '行ってみてほしい', '行ってほしい'];
+
+// 対象者を表すキーワード（「〜方」「〜人」で終わる入力を検出）
+// ひらがな表記（「かた」「ひと」）にも対応
+const Q5_TARGET_KEYWORDS = ['方', '人', 'かた', 'ひと', 'ママ', 'パパ'];
+
+// 感想・感情ベースの入力用テンプレート
+const Q5_STATEMENT_TPL = {
+  standard: [
+    v => `${v}ので、同じ悩みを持つ方にもおすすめしたいです。`,
+    v => `${v}と感じているので、気になっている方はぜひ一度試してみてほしいです。`,
+    v => `${v}ので、迷っている方には一度行ってみてほしいと思います。`,
+  ],
+  polite: [
+    v => `${v}と感じておりますので、同じお悩みをお持ちの方にもお勧めしたいです。`,
+    v => `${v}ことから、気になっていらっしゃる方にはぜひ一度足を運んでいただきたいです。`,
+    v => `${v}と思っておりますので、迷われている方にはぜひお勧めしたいです。`,
+  ],
+};
+
+// 対象者ベースの入力用テンプレート（「膝が痛い方」「デスクワークの方」等）
+const Q5_TARGET_TPL = {
+  standard: [
+    v => `${v}には、ぜひ一度行ってみてほしいです。`,
+    v => `${v}にはおすすめしたいです。`,
+    v => `${v}には、きっと合うと思います。`,
+    v => `${v}にこそ、一度試してみてほしいです。`,
+    v => `${v}は、ぜひ相談だけでもしてみてほしいです。`,
+  ],
+  polite: [
+    v => `${v}には、ぜひ一度足を運んでいただきたいと思います。`,
+    v => `${v}にはお勧めしたいと思っております。`,
+    v => `${v}には、きっと合うのではないかと思います。`,
+    v => `${v}にこそ、一度ご相談されてみてはいかがかと思います。`,
+    v => `${v}には、ぜひ一度お越しいただきたいです。`,
+  ],
+};
+
+// ═══════════════════════════════════════════════════════════
+//  自由入力テキストをQ固有のフレームでラップする（メイン関数）
+// ═══════════════════════════════════════════════════════════
+function wrapFreeText(qId, formality, rawText) {
+  const v = cleanFreeText(rawText);
+  if (!v) return null;
+
+  // Q1〜Q3 は専用ラッパーで処理
+  if (qId === 'q1') return wrapQ1(formality, v);
+  if (qId === 'q2') return wrapQ2(formality, v);
+  if (qId === 'q3') return wrapQ3(formality, v);
+
+  // Q4 は専用ラッパーで処理（カテゴリ判定＋完成文チェック込み）
+  if (qId === 'q4') return wrapQ4(formality, v);
+
+  // Q5: 既に完成された文ならそのまま使う
+  if (isCompleteSentence(v)) return v + '。';
+
+  // Q5: 既に「おすすめ」等を含む場合はそのまま文末を付けるだけ
+  if (qId === 'q5') {
+    const alreadyHasRecommend = Q5_ALREADY_KEYWORDS.some(kw => v.includes(kw));
+    if (alreadyHasRecommend) {
+      return v + '。';
+    }
+    // 対象者ベースの入力（「〜方」「〜人」で終わる）か感想ベースかで分岐
+    const isTarget = Q5_TARGET_KEYWORDS.some(kw => v.endsWith(kw));
+    const tpls = isTarget ? Q5_TARGET_TPL[formality] : Q5_STATEMENT_TPL[formality];
+    return tpls ? pick(tpls)(v) : v + '。';
+  }
+
+  return v + '。';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  テンプレート辞書（パーソナリティ別）
+//  各パーソナリティに standard と polite の両テンプレを持つ
+//  ※自由入力専用版では openers と connectors のみ使用
+// ═══════════════════════════════════════════════════════════
+
+const STD_TPL = {
+  // ━━━━ friendly（フレンドリー・親しみやすい） ━━━━
+  friendly: {
+    openers: [
+      'ネットで見つけて、気になって行ってみたんです。',
+      '前から気になってて、やっと予約できました。',
+      'たまたまSNSで見かけて、試しに行ってみました。',
+      '口コミを見て気になったので、行ってみました。',
+      '評判がよさそうだったので、思い切って予約してみました。',
+      '何とかしたくて色々調べた結果、こちらに行ってみました。',
+      '近所で評判がよさそうだったので、行ってきました。',
+      'ずっと気になっていて、やっと行けました。',
+    ],
+    connectors: ['それで、', 'で、', 'そんな感じだったんですが、', 'そんな時に、', 'そこで、'],
+    midConnectors: ['あと、', 'それと、', 'ちなみに、', 'それから、', 'あとは、'],
+  },
+
+  // ━━━━ cheerful（明るい・元気いっぱい） ━━━━
+  cheerful: {
+    openers: [
+      'ネットで見つけて、これだ！と思って予約しました。',
+      '気になってて、思い切って行ってきました！',
+      'SNSで見かけて、さっそく試してみたんです。',
+      '口コミで見つけて、すぐに予約しちゃいました！',
+      'とにかく何とかしたくて、予約しちゃいました。',
+      '評判がよかったので、期待を持って来院しました。',
+      '前から気になってて、やっと行けました！',
+      'ずっと気になってたので、思い切って予約しました！',
+    ],
+    connectors: ['で、', 'そんな時に、', 'そこで、', 'その後、', 'それで、'],
+    midConnectors: ['あと、', 'それと、', 'ちなみに、', 'それから、', 'さらに、'],
+  },
+
+  // ━━━━ calm（落ち着いた・控えめ） ━━━━
+  calm: {
+    openers: [
+      'ネットで見つけて、予約させていただきました。',
+      '以前から気になっていたので、来院しました。',
+      'たまたま目に入ったので、試してみることにしました。',
+      '口コミを見て気になり、来院しました。',
+      'インターネットで評判を見て、予約しました。',
+      '色々と検索した中で、こちらを選びました。',
+      'ずっと迷っていたのですが、来院することにしました。',
+      'ホームページを見て、予約することにしました。',
+    ],
+    connectors: ['そこで、', 'そういった状況で、', 'その後、', 'そうした中で、', 'そのような経緯から、'],
+    midConnectors: ['また、', 'それに加えて、', 'さらに、', 'なお、', 'あわせて、'],
+  },
+
+  // ━━━━ polite_type（丁寧・きちんとした） ━━━━
+  polite_type: {
+    openers: [
+      'ネットで見つけて、予約いたしました。',
+      'かねてから気になっておりましたので、来院いたしました。',
+      '口コミで見かけて、予約させていただきました。',
+      'ホームページを拝見して、お世話になりました。',
+      'インターネットで拝見して、予約いたしました。',
+      '色々と検討させていただいた上で、こちらにお願いすることにしました。',
+      'ずっと迷っておりましたが、思い切ってお伺いしました。',
+      '以前から気になっておりまして、予約いたしました。',
+    ],
+    connectors: ['そこで、', 'そうした中で、', 'そうした状況で、', 'そのような経緯から、', 'その後、'],
+    midConnectors: ['また、', 'それに加えて、', 'さらに、', 'なお、', 'あわせて、'],
+  },
+};
+
+// Personality-specific polite openers
+const POL_OPENERS = {
+  friendly: [
+    'お世話になりました。',
+    'こちらで施術を受けさせていただきました。',
+    'この度お伺いさせていただきました。',
+    '先日初めてお越しさせていただきました。',
+    'お世話になっております。',
+    '口コミを拝見して、来院いたしました。',
+    '評判をお聞きして、予約させていただきました。',
+    '思い切ってお伺いしてみました。',
+  ],
+  cheerful: [
+    'こちらで素敵な施術をしていただきました！',
+    'お世話になりました。本当にありがとうございます！',
+    'この度初めて来院させていただきました。',
+    '先日お伺いさせていただきました。',
+    'お世話になっております。',
+    '口コミを見て、早速お伺いいたしました。',
+    '評判がよかったので、来院いたしました。',
+    '思い切ってお伺いしてみたところ、素敵でした。',
+  ],
+  calm: [
+    'こちらでお世話になりました。',
+    '先日初めてお伺いさせていただきました。',
+    '口コミを拝見して、来院いたしました。',
+    'この度お越しさせていただきました。',
+    'お世話になっております。',
+    'インターネットで拝見して、予約させていただきました。',
+    '以前から気になっておりましたので、来院いたしました。',
+    'ホームページを拝見して、来院いたしました。',
+  ],
+  polite_type: [
+    'こちらでお世話になりました。',
+    '先日初めてお伺いさせていただきました。',
+    '口コミを拝見いたしまして、来院いたしました。',
+    'この度お越しさせていただいた次第です。',
+    'お世話になっております。',
+    'インターネットで拝見いたしまして、予約させていただきました。',
+    'かねてから気になっておりましたので、来院いたしました。',
+    'ホームページを拝見して、来院いたしました。',
+  ],
+};
+
+const POL_BASE = {
+  connectors: ['そこで、', 'そういった中で、', 'そのような経緯から、', 'そうした状況で、', 'その後、'],
+  midConnectors: ['また、', 'それに加えて、', '加えて、', 'さらに、', 'なお、'],
+};
+
+// ═══════════════════════════════════════════════════════════
+//  語尾チェック：同じ語尾が連続しないよう検出する
+// ═══════════════════════════════════════════════════════════
+function findConsecutiveEnding(sentences) {
+  const endings = ['ました', 'でした', 'ています', 'ております', 'です', 'ません'];
+  for (let i = 1; i < sentences.length; i++) {
+    const s1 = sentences[i-1].replace(/[。！？!?…\s]+$/g, '');
+    const s2 = sentences[i].replace(/[。！？!?…\s]+$/g, '');
+    for (const e of endings) {
+      if (s1.endsWith(e) && s2.endsWith(e)) return i;
+    }
+    // 末尾4文字完全一致
+    if (s1.slice(-4) === s2.slice(-4) && s1.length >= 4) return i;
+  }
+  return -1;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  1つのバージョンの文章を生成する（全て自由入力として処理）
+// ═══════════════════════════════════════════════════════════
+function buildReview(personality, formality, inputs) {
+  // Select template source for openers/connectors
+  let tpl;
+  if (formality === 'standard') {
+    tpl = STD_TPL[personality] || STD_TPL['friendly'];
+  } else {
+    tpl = {
+      openers: POL_OPENERS[personality] || POL_OPENERS['friendly'],
+      connectors: POL_BASE.connectors,
+      midConnectors: POL_BASE.midConnectors,
+    };
+  }
+
+  // 1. 書き出し
+  const opener = pick(tpl.openers);
+
+  // 2. 各質問の自由入力テキストをwrapFreeTextで文章化
+  let sentences = [];
+  let sources = [];
+
+  for (let attempt = 0; attempt < 5; attempt++) {
+    sentences = [];
+    sources = [];
+
+    // --- Q1 ---
+    if (inputs.q1) {
+      const wrapped = wrapFreeText('q1', formality, inputs.q1);
+      if (wrapped) { sentences.push(wrapped); sources.push('q1'); }
+    }
+
+    // --- Q2 ---
+    if (inputs.q2) {
+      const wrapped = wrapFreeText('q2', formality, inputs.q2);
+      if (wrapped) { sentences.push(wrapped); sources.push('q2'); }
+    }
+
+    // --- Q3 ---
+    if (inputs.q3) {
+      const wrapped = wrapFreeText('q3', formality, inputs.q3);
+      if (wrapped) { sentences.push(wrapped); sources.push('q3'); }
+    }
+
+    // --- Q4 ---
+    if (inputs.q4) {
+      const wrapped = wrapFreeText('q4', formality, inputs.q4);
+      if (wrapped) { sentences.push(wrapped); sources.push('q4'); }
+    }
+
+    // --- Q5 ---
+    if (inputs.q5) {
+      const wrapped = wrapFreeText('q5', formality, inputs.q5);
+      if (wrapped) { sentences.push(wrapped); sources.push('q5'); }
+    }
+
+    // 語尾チェック
+    if (findConsecutiveEnding(sentences) === -1) break;
+  }
+
+  // 2.5. friendly/cheerful の場合、Q3・Q4の文末を確率で「！」に変換
+  if (personality === 'friendly' || personality === 'cheerful') {
+    const exclamProb = personality === 'cheerful' ? 0.5 : 0.35;
+    for (let i = 0; i < sentences.length; i++) {
+      if (sources[i] === 'q3' || sources[i] === 'q4') {
+        if (Math.random() < exclamProb && !sentences[i].endsWith('！')) {
+          sentences[i] = sentences[i].replace(/。$/, '！');
+        }
+      }
+    }
+  }
+
+  // 3. 接続詞を自然に挿入（頻度を控えめに）
+  //    - Q5の前には接続詞を付けない（「それに加えて」等は不自然）
+  //    - Q1→Q2, Q2→Q3 の遷移時は控えめに接続詞を挿入
+  let final = [];
+  let lastConnector = '';
+  for (let i = 0; i < sentences.length; i++) {
+    let s = sentences[i];
+    if (i === 0) {
+      final.push(s);
+    } else {
+      const prevSrc = sources[i - 1];
+      const curSrc  = sources[i];
+
+      // Q5の前には接続詞を付けない
+      if (curSrc === 'q5') {
+        final.push(s);
+        continue;
+      }
+
+      const isTopicShift = (prevSrc === 'q1' && curSrc === 'q2') ||
+                           (prevSrc === 'q2' && curSrc === 'q3') ||
+                           (prevSrc === 'q1' && curSrc === 'q3');
+
+      if (isTopicShift && Math.random() < 0.25) {
+        const conn = pickExcluding(tpl.connectors, lastConnector);
+        lastConnector = conn;
+        final.push(conn + s);
+      } else if (!isTopicShift && i >= 2 && Math.random() < 0.2) {
+        let conn = pickExcluding(tpl.midConnectors, lastConnector);
+        lastConnector = conn;
+        final.push(conn + s);
+      } else {
+        final.push(s);
+      }
+    }
+  }
+
+  // 4. 文ごとに改行を入れ、ランダムに空行を挟んで見た目に変化をつける
+  let result = opener;
+  if (final.length <= 1) {
+    result += final.join('');
+  } else {
+    const pattern = Math.random();
+    if (pattern < 0.3) {
+      result += final.join('\n');
+    } else if (pattern < 0.7) {
+      const breakIdx = 1 + Math.floor(Math.random() * (final.length - 1));
+      for (let i = 0; i < final.length; i++) {
+        if (i === 0) {
+          result += final[i];
+        } else if (i === breakIdx) {
+          result += '\n\n' + final[i];
+        } else {
+          result += '\n' + final[i];
+        }
+      }
+    } else {
+      for (let i = 0; i < final.length; i++) {
+        if (i === 0) {
+          result += final[i];
+        } else {
+          result += (Math.random() < 0.3 ? '\n\n' : '\n') + final[i];
+        }
+      }
+    }
+  }
+
+  // 5. 生成後レビュー：不自然な表現を検出・修正する
+  result = postReview(result);
+
+  return result;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  生成後レビュー：テンプレート合成で生じる不自然な表現を修正
+//  各ルールは [検出パターン(正規表現), 修正関数] のペア
+// ═══════════════════════════════════════════════════════════
+function postReview(text) {
+  // --- 同じ単語・フレーズの不自然な繰り返しを修正 ---
+  // 「安心して〜安心して〜」の重複
+  text = text.replace(/安心して([^。！？\n]+)安心して/g, '安心して$1');
+
+  // 「気持ちよく〜気持ちよく」の重複
+  text = text.replace(/気持ちよく([^。！？\n]+)気持ちよく/g, '気持ちよく$1');
+
+  // 「リラックスできる〜リラックスして〜」の重複→2つ目を「ゆったりと」に置換
+  text = text.replace(/リラックス([^。！？\n]+)リラックスして/g, 'リラックス$1ゆったりと');
+
+  // --- 「〜ので〜ので」が近接する場合、2つ目を「こともあり」等に変換 ---
+  text = text.replace(/(ので、[^。！？\n]{4,40})ので、/g, '$1こともあり、');
+
+  // --- 「〜ました。〜ました。〜ました。」3連続を緩和 ---
+  // （最低限のセーフティネット）
+  text = text.replace(/(ました。[^\n]*ました。[^\n]*)ました。/g, (match) => {
+    return match.replace(/ました。$/, 'ています。');
+  });
+
+  return text;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  メイン生成関数
+// ═══════════════════════════════════════════════════════════
+function generateReview() {
+  const v = id => document.getElementById(id).value.trim();
+
+  const raw = { q1: v('q1'), q2: v('q2'), q3: v('q3'), q4: v('q4'), q5: v('q5') };
+
+  if (!raw.q1 && !raw.q2 && !raw.q3 && !raw.q4 && !raw.q5) {
+    alert('少なくとも1つの質問にお答えください。');
+    return;
+  }
+
+  // Get selected personality (default to 'friendly')
+  const personalityChip = document.querySelector('.chip[data-personality].selected');
+  const personality = personalityChip ? personalityChip.dataset.personality : 'friendly';
+
+  // 全て自由入力として処理
+  const inputs = {
+    q1: raw.q1 || null,
+    q2: raw.q2 || null,
+    q3: raw.q3 || null,
+    q4: raw.q4 || null,
+    q5: raw.q5 || null,
+  };
+
+  // 2バージョン生成：standard + polite
+  const standardText = buildReview(personality, 'standard', inputs);
+  const politeText   = buildReview(personality, 'polite', inputs);
+
+  document.getElementById('result-standard').textContent = standardText;
+  document.getElementById('result-polite').textContent = politeText;
+
+  const sec = document.getElementById('result-section');
+  sec.classList.add('visible');
+  setTimeout(() => sec.scrollIntoView({ behavior: 'smooth', block: 'start' }), 120);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  コピー機能
+// ═══════════════════════════════════════════════════════════
+function copyText(btn) {
+  const targetId = btn.getAttribute('data-target');
+  const text = document.getElementById(targetId).textContent;
+
+  const done = () => {
+    btn.textContent = '✅ コピーしました！';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = '📋 この文章をコピーする';
+      btn.classList.remove('copied');
+    }, 3000);
+  };
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
+  } else {
+    fallbackCopy(text, done);
+  }
+}
+
+function fallbackCopy(text, callback) {
+  const el = document.createElement('textarea');
+  el.value = text;
+  el.style.cssText = 'position:fixed;opacity:0';
+  document.body.appendChild(el);
+  el.focus(); el.select();
+  try { document.execCommand('copy'); callback(); } catch(e) { alert('コピーに失敗しました。手動でコピーしてください。'); }
+  document.body.removeChild(el);
+}
+</script>
+</body>
+</html>
